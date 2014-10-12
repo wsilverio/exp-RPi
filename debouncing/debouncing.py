@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 from time import sleep
 import RPi.GPIO as GPIO
@@ -16,12 +16,12 @@ BCM 22 = BOARD pin 15
 BOTAO_ESQUERDA = 21 
 BOTAO_DIREITA = 17
 BOTAO_ENTER = 4
-BOTAO_ESQ = 22
+BOTAO_ESC= 22
 
 GPIO.setup(BOTAO_ESQUERDA, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(BOTAO_DIREITA, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(BOTAO_ENTER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-GPIO.setup(BOTAO_ESQ, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(BOTAO_ESC, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 debouncing = 0.05
 
@@ -38,9 +38,9 @@ while True:
 		print "Enter"
 		sleep(debouncing)
 		while GPIO.input(BOTAO_ENTER): pass
-	elif GPIO.input(BOTAO_ESQ):
-		print "Esq"
+	elif GPIO.input(BOTAO_ESC):
+		print "Esc"
 		sleep(debouncing)
-		while GPIO.input(BOTAO_ESQ): pass
+		while GPIO.input(BOTAO_ESC): pass
 	
 	sleep(debouncing)
