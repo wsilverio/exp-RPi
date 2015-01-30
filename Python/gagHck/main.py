@@ -3,7 +3,9 @@
 import sys
 import RPi.GPIO as GPIO
 
-pin, std = int(sys.argv[1]), bool(sys.argv[2])
+pin, std = int(sys.argv[1]), int(sys.argv[2])
+
+GPIO.setwarnings(False)
 
 GPIO.setmode(GPIO.BOARD)
 
