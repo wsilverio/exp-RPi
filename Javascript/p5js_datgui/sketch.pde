@@ -10,6 +10,8 @@ void setup() {
 }
 void draw() {
   background(255);
+  stroke(unhex("FF" + window.cor.substring(1)));
+
   for (int i = 0; i < window.pontos; i++) {
     ponto[i][0] += random(-1, 1);
     ponto[i][1] += random(-1, 1);
@@ -19,7 +21,6 @@ void draw() {
 
     for (int x = i; x >= 0; x--) {
       if (dist(ponto[i][0], ponto[i][1], ponto[x][0], ponto[x][1]) <= window.distancia){
-        stroke(unhex("FF" + window.cor.substring(1)));
         line(ponto[i][0], ponto[i][1], ponto[x][0], ponto[x][1]);
       }
     }
