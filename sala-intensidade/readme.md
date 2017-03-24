@@ -10,9 +10,22 @@ Carregue o sketch [Standard Firmata](https://github.com/firmata/arduino/blob/mas
 
 ### Raspberry Pi:
 
+Montar a partição `boot` e habilitar a conexão ssh:
+```
+touch ssh
+```
+
+Acessar o Raspberry Pi:
+```
+ssh pi@ip
+$ raspberry
+```
+
+<!--
 Atualize o sistema:
 ```
-sudo apt-get update
+sudo apt-get update -y
+sudo apt-get upgrade -y
 ```
 
 Instale os drivers **Alsa** e o player MP3 **mpg123**:
@@ -39,6 +52,14 @@ Instale o pacote **pyFirmata**:
 ```
 sudo pip install pyfirmata
 ```
+-->
+
+Execute o instalador automático:
+
+```
+bash <(curl -s https://raw.githubusercontent.com/wsilverio/exp-RPi/master/sala-intensidade/autoinstall.sh)
+```
+
 
 Reinicie o sistema:
 ```
