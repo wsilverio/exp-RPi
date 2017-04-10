@@ -6,49 +6,93 @@ TODO list:
     Raspberry
     Documentacao
 '''
+import os, subprocess, sys, time, threading
 
-import os, subprocess, sys
-from pyfirmata import Arduino, util
+def checkPort():
+    port = None
+    for file in os.listdir('/dev/'):
+        if file.startswith('ttyACM') or file.startswith('ttyUSB'):
+            port = os.path.join("/dev", file)
+            break
+            # PORT.append(os.path.join("/dev", file))
+    return port
 
-MIN = 0
-MAX = 255
-STEP = 10
-DELAYMS = 10
+VOICE_FILE = './voz.mp3' # Localização do arquivo de voz
 
-OUTPIN = 'd:3:p'
+isRasp = True       # Raspberry Pi plataforma
+hasFirmata = True   # Firmata modulo
 
-port = None # '/dev/ttyACM0'
+MIN = 0             # PWM max
+MAX = 255           # PWM min
+STEP = 10           # PWM passo
+DELAYMS = 10        # Delay (ms)
 
-for file in os.listdir('/dev/'):
-    if file.startswith('ttyACM'):
-        port = os.path.join("/dev", file)
-        break
+OUTPIN = 'd:3:p'    # Arduino pino
+PORT = checkPort()  # Arduino porta ('/dev/ttyUSBx' or '/dev/ttyACMx')
 
-if port == None:
-    print 'Nenhum dispositivo reconhecido em /dev/ttyACM*'
-    exit(1)
-else:
-    print 'Conectando a', port
+INPIN = 7           # Raspberry pino (número no conector)
 
-board = Arduino(port)
-out = board.get_pin(OUTPIN)
+try:
+    from pyfirmata import Arduino, util
+except ImportError:
+    hasFirmata = False
 
-delay = DELAYMS/1000.0
+if not hasFirmata:
+    print "Módulo firmata não encontrado."
+
+try:
+    import RPi.GPIO as GPIO
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD) # Números dos pinos no conector
+    GPIO.setup(INPIN, GPIO.IN)
+    print "Plataforma: Raspberry Pi\n"
+except ImportError:
+    isRasp = False
+    print "Plataforma: Não Raspberry Pi\n"
+
+i = 0
+while PORT == None:
+    print 'Nenhum dispositivo reconhecido em /dev/ttyACM* ou /dev/ttyUSB*'
+    print 'Por favor, conecte um Arduino à porta USB {%d}\n' %i
+    i += 1
+    PORT = checkPort()
+    time.sleep(5)
+
+print 'Conectando a', PORT
+
+board = None
+out = None
+
+if hasFirmata:
+    board = Arduino(PORT)
+    out = board.get_pin(OUTPIN)
 
 p = None
+delay = DELAYMS/1000.0
 
 try:
     while True:
-        p = subprocess.Popen(['mpg123', '-q', 'ola.mp3'])
+
+        if isRasp:
+            
+            if GPIO.input(INPIN) == 1: # Movimento detectado
+                pass
+
+        else:
+            pass
+
+        p = subprocess.Popen(['mpg123', '-q', VOICE_FILE])
         p.wait()
 
-        for i in xrange(MIN, MAX, STEP):
-            value = i/float(MAX)
-            out.write(value)
-            board.pass_time(delay)
+        if hasFirmata:
+            for i in xrange(MIN, MAX, STEP):
+                value = i/float(MAX)
+                out.write(value)
+                board.pass_time(delay)
 
 except KeyboardInterrupt:
     p.terminate()
-    out.write(0)
+    if hasFirmata:
+        out.write(0)
     board.exit()
     exit()
