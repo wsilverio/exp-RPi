@@ -5,9 +5,37 @@
 TODO list:
     Raspberry
     Documentacao
+    Heartbeat
 '''
-import os, subprocess, sys, time, threading
+import os, subprocess, sys, time
+from threading import Thread
 
+VOICE_FILE = './voz.mp3' # Localização do arquivo de voz
+
+isRasp = True       # Raspberry Pi plataforma
+hasFirmata = True   # Firmata modulo
+
+MIN = 0             # PWM max
+MAX = 255           # PWM min
+STEP = 1           # PWM passo
+DELAYMS = 10        # Delay (ms)
+
+ARD_OUTPIN = 'd:3:p'    # Arduino pino
+
+PI_INPIN = 7            # Raspberry pino (número no conector)
+PI_LEDPIN = 11          # Raspberry pino (número no conector)
+
+timeToExit = False
+
+def pwmControl(board, out):
+    if hasFirmata:
+        for i in xrange(MIN, MAX, STEP):
+            value = i/float(MAX)
+            out.write(value)
+            board.pass_time(delay)
+            # print value
+        out.write(0)
+    
 def checkPort():
     port = None
     for file in os.listdir('/dev/'):
@@ -17,20 +45,28 @@ def checkPort():
             # PORT.append(os.path.join("/dev", file))
     return port
 
-VOICE_FILE = './voz.mp3' # Localização do arquivo de voz
+def heartBeat(pin):
+    tempo_ms = [50, 100, 15, 1200]
+    toSeconds = lambda x: x/1000.0
+    tempos = [toSeconds(i) for i in tempo_ms]
 
-isRasp = True       # Raspberry Pi plataforma
-hasFirmata = True   # Firmata modulo
+    while True:
+        if timeToExit:
+            if isRasp:
+                GPIO.output(pin, GPIO.LOW)
+            break
 
-MIN = 0             # PWM max
-MAX = 255           # PWM min
-STEP = 10           # PWM passo
-DELAYMS = 10        # Delay (ms)
-
-OUTPIN = 'd:3:p'    # Arduino pino
-PORT = checkPort()  # Arduino porta ('/dev/ttyUSBx' or '/dev/ttyACMx')
-
-INPIN = 7           # Raspberry pino (número no conector)
+        for i in xrange(0, len(tempos)):
+            if (i % 2):
+                print ""
+                if isRasp:
+                    GPIO.output(pin, GPIO.LOW)
+            else:
+                print "*"
+                if isRasp:
+                    GPIO.output(pin, GPIO.HIGH)
+    
+            time.sleep(tempos[i])
 
 try:
     from pyfirmata import Arduino, util
@@ -44,11 +80,14 @@ try:
     import RPi.GPIO as GPIO
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD) # Números dos pinos no conector
-    GPIO.setup(INPIN, GPIO.IN)
+    GPIO.setup(PI_INPIN, GPIO.IN)
+    GPIO.setup(PI_LEDPIN, GPIO.OUT)
     print "Plataforma: Raspberry Pi\n"
 except ImportError:
     isRasp = False
     print "Plataforma: Não Raspberry Pi\n"
+
+PORT = checkPort()  # Arduino porta ('/dev/ttyUSBx' or '/dev/ttyACMx')
 
 i = 0
 while PORT == None:
@@ -60,39 +99,64 @@ while PORT == None:
 
 print 'Conectando a', PORT
 
-board = None
-out = None
+ArduinoBoard = None
+ArduinoPin = None
 
 if hasFirmata:
-    board = Arduino(PORT)
-    out = board.get_pin(OUTPIN)
+    ArduinoBoard = Arduino(PORT)
+    ArduinoPin = ArduinoBoard.get_pin(ARD_OUTPIN)
 
 p = None
 delay = DELAYMS/1000.0
 
+# th=Thread(target=pwmControl, args=(ArduinoBoard, ArduinoPin,))
+# th.start()
+
+threadHeart = Thread(target=heartBeat, args=(PI_LEDPIN,))
+threadHeart.start()
+
 try:
     while True:
 
+        heartBeat(4)
+        continue
+
         if isRasp:
             
-            if GPIO.input(INPIN) == 1: # Movimento detectado
+            if GPIO.input(PI_INPIN) == 1: # Movimento detectado
                 pass
-
         else:
             pass
 
         p = subprocess.Popen(['mpg123', '-q', VOICE_FILE])
-        p.wait()
+        # p.wait()
+        # th.join()
+        pwmControl(ArduinoBoard, ArduinoPin)
 
-        if hasFirmata:
-            for i in xrange(MIN, MAX, STEP):
-                value = i/float(MAX)
-                out.write(value)
-                board.pass_time(delay)
+        # time.sleep(5)
 
 except KeyboardInterrupt:
-    p.terminate()
+    timeToExit = True
+
+    if p != None:
+        try:
+            p.terminate()
+        except OSError:
+            pass # processo ja terminado
+        except Exception as e:
+            raise e
+
     if hasFirmata:
-        out.write(0)
-    board.exit()
+        try:
+            ArduinoPin.write(0)
+            ArduinoBoard.exit()
+        except Exception as e:
+            raise e
+
+    if isRasp:
+        GPIO.cleanup()
+
     exit()
+
+except Exception as e:
+    raise e
